@@ -1,22 +1,23 @@
 {
-  "tag": "v1.0.0",
-  "commit": "e1207cc6525ed0e8f7f8b2266cc416996a2f6ae3",
-  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/44099107123",
-  "private": true,
+  "tag": "v1.1.0-openxr-preview",
+  "commit": "74794687a1f66f291e02db3154b088324e6149de",
+  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/44160556493",
+  "private": false,
   "success": true,
-  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.0.0",
+  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.1.0-openxr-preview",
   "assets": [
     {
-      "name": "HOTD4-Local-Builder-v1.0.0.zip",
-      "sha256": "9d89a56649c1a6af6a359329f8c87638f915b7713069b04bfaf0c943646d776d",
-      "size": 4980538,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-666d6dea113b444b4dfa/HOTD4-Local-Builder-v1.0.0.zip"
+      "name": "HOTD4-Local-Builder-v1.1.0-openxr-preview.zip",
+      "sha256": "d8b785d68cd51477bc3de558769de5c5f07cbb8d48ef84de877487c45896b3d5",
+      "size": 4982355,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-032fa3a2ab86ad9020f7/HOTD4-Local-Builder-v1.1.0-openxr-preview.zip"
     },
     {
       "name": "SHA256SUMS.txt",
-      "sha256": "f489dd204e609738102d3e192afd5d7641046a23852cca603ae1ce0ca854cac5",
-      "size": 97,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-666d6dea113b444b4dfa/SHA256SUMS.txt"
+      "sha256": "d2b5e6ebaaf930fe14f1ecba3bde9eaec858732b799292de2f05feb2982989bf",
+      "size": 112,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-032fa3a2ab86ad9020f7/SHA256SUMS.txt"
     }
-  ]
+  ],
+  "prerelease": true
 }
