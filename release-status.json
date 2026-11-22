@@ -1,22 +1,22 @@
 {
-  "tag": "v1.3.9",
-  "commit": "9c9f6f9f1eb6969da6dccb4444cdc1665d57fc83",
-  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/44969673330",
+  "tag": "v1.3.10",
+  "commit": "d936d50f5c6763a076e83158b7bb8c6bbabd2741",
+  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/45023411127",
   "private": false,
   "success": true,
-  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.3.9",
+  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.3.10",
   "assets": [
     {
-      "name": "HOTD4-Local-Builder-v1.3.9.zip",
-      "sha256": "a0389c51f5257ca792df91f90d3cc851c1a4535339a6105e5a998ed71139368e",
-      "size": 5081327,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-dcf1b3cc22d2813d0011/HOTD4-Local-Builder-v1.3.9.zip"
+      "name": "HOTD4-Local-Builder-v1.3.10.zip",
+      "sha256": "96ab9bb5b78084e8ba87ab1213d5180bd3efca6414c7671468fa2b42e3cda5e1",
+      "size": 5082769,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-e6ba41cd6e9e6586250d/HOTD4-Local-Builder-v1.3.10.zip"
     },
     {
       "name": "SHA256SUMS.txt",
-      "sha256": "cc7b99368b753127034109dbff4fe490619647b7d2388f81085022c98ed5a9b5",
-      "size": 97,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-dcf1b3cc22d2813d0011/SHA256SUMS.txt"
+      "sha256": "56ccb062a9b5af788e59c99fec778065fd7647f919d2612f929ce322b8cc32c5",
+      "size": 98,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-e6ba41cd6e9e6586250d/SHA256SUMS.txt"
     }
   ],
   "prerelease": false
