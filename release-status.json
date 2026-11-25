@@ -1,23 +1,23 @@
 {
-  "tag": "v1.3.24",
-  "commit": "8aae363e23fb5cd6cb5b254df2761f1e8ba01c2d",
-  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/45695641541",
+  "tag": "v1.3.25-audio-test.1",
+  "commit": "368f3d7268b9e053361ca3fd1a78e2a683f33b4d",
+  "run_url": "https://github.com/davidptrssvea/HOTD4-recomp/actions/runs/45710782124",
   "private": false,
   "success": true,
-  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.3.24",
+  "release_url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.3.25-audio-test.1",
   "assets": [
     {
-      "name": "HOTD4-Local-Builder-v1.3.24.zip",
-      "sha256": "78ab6fa240d4a186696e43a68c946dc8c36b070c3ca6afbc60d58755544028ba",
-      "size": 5128185,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-3201ebb84cc49aaa74f8/HOTD4-Local-Builder-v1.3.24.zip"
+      "name": "HOTD4-Local-Builder-v1.3.25-audio-test.1.zip",
+      "sha256": "58c6ba1498c48a4cee5a16d4663937a20df31923a016c6f5fc79e4e32b5dc400",
+      "size": 5130468,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-5c6dda1a65b164c93931/HOTD4-Local-Builder-v1.3.25-audio-test.1.zip"
     },
     {
       "name": "SHA256SUMS.txt",
-      "sha256": "a1965a9d9e9f524f67c7e232d05af43f4a2c40aa9296ad44a248e5f5255e0888",
-      "size": 98,
-      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-3201ebb84cc49aaa74f8/SHA256SUMS.txt"
+      "sha256": "07bb7422cbfb29bc0c04906191eb13b9b71c0e2001d86ae4e5e55fa56b823633",
+      "size": 111,
+      "url": "https://github.com/davidptrssvea/HOTD4-recomp/releases/download/untagged-5c6dda1a65b164c93931/SHA256SUMS.txt"
     }
   ],
-  "prerelease": false
+  "prerelease": true
 }
