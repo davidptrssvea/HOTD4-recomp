@@ -1,5 +1,9 @@
 # HOTD4 Local Builder
 
+## Audio skipping test (v1.3.25-audio-test.1)
+
+Download the [Windows audio test builder](https://github.com/davidptrssvea/HOTD4-recomp/releases/tag/v1.3.25-audio-test.1), extract it separately, close HOTD4 and run **Setup.cmd** with your same supported arcade dump and existing installation folder. Settings and saves are retained. This prerelease fixes a reproduced streaming-audio cursor defect; the user's audible skips still need confirmation. It is installed manually because the stable updater excludes prereleases. The launcher retains its v1.3.24 base-version stamp for stable-update compatibility. See RELEASE-NOTES.md for the exact test and validation limits.
+
 ## Gamepad
 
 In the Windows desktop launcher, choose **Gamepad (P1 + P2)** in **Settings → Graphics / Input** and save. The first controller is assigned to P1 and the second to P2. Either stick aims. **RT / A** shoots, **X / LB** reloads, **LT / B** throws a grenade, **Y / RB** changes fire mode and **Menu / Start** joins. Click the left stick to insert a credit. **View / Back** opens the pause menu, where the D-pad navigates and **A** selects.
