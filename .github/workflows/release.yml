@@ -53,6 +53,10 @@ jobs:
         run: python3 .release/test_build_support.py -v
       - name: Test verified operator executable discovery
         run: python3 .release/test_operator_elf.py -v
+      - name: Test streaming audio ring positions
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror .release/test_sega_audio_position.c -lm -o /tmp/hotd4-audio-position-test
+          /tmp/hotd4-audio-position-test
       - name: Test independent keyboard aiming
         run: |
           cc -std=c11 -Wall -Wextra -Werror .release/test_keyboard_aim.c -lm -o /tmp/hotd4-keyboard-test

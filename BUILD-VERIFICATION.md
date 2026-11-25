@@ -1,5 +1,14 @@
 # Verification of the local builder
 
+## Local streamed-audio cursor fix (issue #22, 2026-11-25)
+
+- The supplied v1.3.19 CSV has 22,561 samples, one frame-number gap and a 118-second interruption near its end. For frames 601 through 22451, the median is 16.629 ms, p99 33.332 ms and 13 intervals exceed 40 ms. The videos have not been audibly reviewed and their timestamps are not aligned to CSV frames; this analysis does not establish a causal frame/audio correlation.
+- HOTD4 uses the SEGAAPI/SDL mixer, not the OpenAL route. The relevant runtime code is unchanged between v1.3.19 and v1.3.24.
+- A private 3,600-frame run captured a looping 44.1-kHz stereo buffer reporting byte 65536 for a 65536-byte ring (twice at one callback boundary). Its fractional sample position was 16384.000000785374. The mixer only wrapped at the next sample, exposing a cursor outside the half-open ring interval between callbacks.
+- The mixer now canonicalizes the position at callback completion; position reads lock the mixer and also normalize looping cursors. Fractional sample phase is preserved. Nonlooping and released buffers retain their endpoint behavior.
+- A 3,600-frame retest with SDL dummy output completed without out-of-range reports in more than 10,000 position reads. Pure C tests cover the captured position, exact/subloop boundaries, phase preservation and 100,000 callbacks at each of 22.05, 44.1 and 48 kHz. Desktop and OpenXR targets build.
+- This verifies the cursor defect and its correction. It does not prove that it explains every reported audible skip. Physical HyperX wireless/DTS output and the user's clips still need confirmation before closing issue #22.
+
 ## v1.3.17: keyboard aiming (2026-11-23)
 
 - Both native desktop and optional OpenXR targets build successfully. Keyboard aiming is a Windows desktop input mode; headset controls are unchanged.

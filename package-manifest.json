@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "BUILD-VERIFICATION.md",
-      "sha256": "04e5397943d3af380bca80e404b1632ac29f292d6116a7c27640624d2ef0d09d"
+      "sha256": "5ca7b826b6fe4dbfe90a628c92241a73bf0f81c3f47025495e5370fe0bc908d2"
     },
     {
       "path": "README.md",
@@ -243,7 +243,7 @@
     },
     {
       "path": "source/lindberghrecomp/src/runtime/hle_segaapi.c",
-      "sha256": "26b26239f415232353ec571904dd9c3ccb327217f39af99f4432effeedf14a53"
+      "sha256": "0fc4bcb6692fcc3894e50ebef3a351a4304b2bb01b5b56e6e97ebcd82d49f317"
     },
     {
       "path": "source/lindberghrecomp/src/runtime/hle_vidmode.c",
@@ -344,6 +344,10 @@
     {
       "path": "source/lindberghrecomp/src/runtime/render_queue.h",
       "sha256": "39c9c369b044d942674bdc13141b32edc0837106bfd1114121e7146e5fcdc9bf"
+    },
+    {
+      "path": "source/lindberghrecomp/src/runtime/sega_audio_position.h",
+      "sha256": "a18660d9c12c302f04de7221fe80c423095904cd00f00db18d66fb8679a0d14d"
     },
     {
       "path": "source/lindberghrecomp/src/runtime/sinden_border.h",
@@ -1494,6 +1498,10 @@
       "sha256": "9b250942ff775adc75a907dcc6a63ba7958c6640f85c8a0f453f31bcb7bd246a"
     },
     {
+      "path": "ui/hotd-game-library.ps1",
+      "sha256": "752eb02a1aa941c0282d70c4dbe6ce1a1526a60c349d8f0c0b132777df2cfab2"
+    },
+    {
       "path": "ui/hotd-update-version.txt",
       "sha256": "ad0ee8c026757265117287d6b520e623394692eed586571fda9ea04a3fc33a57"
     },
@@ -1512,10 +1520,6 @@
     {
       "path": "ui/hotd4-display.ps1",
       "sha256": "843f4e1730662181cf5dea834ca955d8be12460d6de1e3af4b057510a6ac85cb"
-    },
-    {
-      "path": "ui/hotd-game-library.ps1",
-      "sha256": "752eb02a1aa941c0282d70c4dbe6ce1a1526a60c349d8f0c0b132777df2cfab2"
     },
     {
       "path": "ui/hotd4-model-motion.cs",

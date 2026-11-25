@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "lindbergh_rt.h"
+#include "sega_audio_position.h"
 
 #if !defined(_WIN32) || defined(RECOMP_GUEST_BASE)
 #include <SDL.h>
@@ -155,6 +156,10 @@ static void mix(void *ud, Uint8 *stream, int len)
             }
             b->pos += step;
         }
+        /* The final sample may reach the ring end exactly. Publish zero (or
+         * the loop start), never a cursor one byte past a streaming ring. */
+        if (b->looping && !b->release)
+            b->pos = sega_loop_position(b->pos, lstart, lend);
     }
     UNLOCK();
 
@@ -291,7 +296,19 @@ static void h_status(CPU *c)
 static void h_get_pos(CPU *c)
 {
     SegaBuf *b = buf_of(A32(0));
-    RET(b ? (uint32_t)b->pos * frame_bytes(b) : 0);
+    uint32_t position = 0;
+    LOCK();
+    if (b) {
+        uint32_t fb = frame_bytes(b);
+        double frames = b->pos;
+        if (b->looping && !b->release) {
+            uint32_t end = (b->loop_end && b->loop_end <= b->size ? b->loop_end : b->size) / fb;
+            frames = sega_loop_position(frames, b->loop_start / fb, end);
+        }
+        position = (uint32_t)frames * fb;
+    }
+    UNLOCK();
+    RET(position);
 }
 static void h_set_pos(CPU *c)
 {
