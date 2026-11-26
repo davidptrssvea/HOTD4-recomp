@@ -628,7 +628,7 @@ enum {
     PLAYER_RELOAD_TIME = 0x284,
     SPRITE_FRAME = 0x28
 };
-extern void hud_route_mark(void);
+extern void hud_wide_canvas_mark(void);
 static HleHandler lifted_player_sound, lifted_sprite_next, lifted_sprite_draw, lifted_resolution;
 
 static void h_player_sound(CPU *c)
@@ -710,7 +710,7 @@ static unsigned hud_primitive_count;
 static struct {
     uint32_t work;
     HudSpriteLayout layout;
-} hud_primitives[64]; // The startup serial screen also queues one sprite per glyph.
+} hud_primitives[256]; // Two result cards can submit separate primitives per glyph.
 static HudSpriteLayout queuing_layout;
 static HleHandler lifted_font_clear, lifted_font_draw, lifted_font_ctor;
 static uint32_t subtitle_fonts[32];
@@ -784,21 +784,119 @@ static void h_primitive_draw(CPU *c)
 static void h_sprite_draw(CPU *c)
 {
     uint32_t caller = rd32(c->esp - 4);
-    // The route sprites use the same logical canvas as their hit boxes.
-    if (caller == 0x081800b1u) hud_route_mark();
+    // Route selection and name entry map both guns across the full sprite canvas.
+    if (caller == 0x081800b1u || caller == 0x081605d7u ||
+        caller == 0x081605f0u || caller == 0x08160614u)
+        hud_wide_canvas_mark();
     HudSpriteLayout previous = queuing_layout;
     // CSpriteScreen::Draw submits the boot artwork on the logical sprite canvas.
     if (caller == 0x081571f8u) queuing_layout = HUD_LAYOUT_SPLASH;
+    // Result and final ranking screens use the same full-screen tiled grid.
+    else if (caller == 0x08171b5fu || caller == 0x0816a24fu)
+        queuing_layout = HUD_LAYOUT_WIDE;
+    else if (caller == 0x0816a26au) // Player ranking title
+        queuing_layout = HUD_LAYOUT_CENTER;
+    // CCreditMgr::Draw queues each player's labels and digits separately.
+    // ESI is the player offset in the digit table (0 for P1, 0x18 for P2).
+    else if (caller == 0x08078acau || caller == 0x08078ae3u || caller == 0x08078b13u)
+        queuing_layout = c->esi ? HUD_LAYOUT_CREDIT_RIGHT : HUD_LAYOUT_CREDIT_LEFT;
+    // CPlayer::Draw queues the score digits from right to left.
+    else if (caller == 0x08165581u)
+        queuing_layout = rd8(c->esi + PLAYER_INDEX) == 1 ? HUD_LAYOUT_SCORE_RIGHT : HUD_LAYOUT_SCORE_LEFT;
     push32(c, caller);
     lifted_sprite_draw(c);
     queuing_layout = previous;
 }
 
+static int weapon_disabled_player = -1;
+
+static int draw_inventory_sprite(CPU *c, uint32_t caller)
+{
+    // CPlayer::Draw submits these sprites with an identity matrix. The
+    // offsets are fractions of the final frame relative to the arcade HUD.
+    uint32_t sprite_offset;
+    float x, y;
+    switch (caller) {
+    case 0x0816540du: // Life
+        sprite_offset = 0x2bc;
+        x = 0.009f;
+        y = 0.045f;
+        break;
+    case 0x0816541cu: // Grenades
+        sprite_offset = 0x3a0;
+        x = 0.010f;
+        y = 0.074f;
+        break;
+    case 0x0816542bu: // Player indicator
+        sprite_offset = 0x484;
+        x = 0.006f;
+        y = -0.030f;
+        break;
+    default:
+        return 0;
+    }
+
+    unsigned player = rd8(c->eax - sprite_offset + PLAYER_INDEX);
+    if (player >= 2) return 0;
+
+    void *translation = GP(c->edx + 0x30);
+    float saved[2];
+    memcpy(saved, translation, sizeof saved);
+    // Convert to logical sprite coordinates before the 0.75x HUD fit.
+    const float moved[2] = {
+        saved[0] + (player ? -x : x) * (640.0f / 0.75f),
+        saved[1] + y * 480.0f
+    };
+    memcpy(translation, moved, sizeof moved);
+    HudSpriteLayout previous = queuing_layout;
+    queuing_layout = player ? HUD_LAYOUT_CREDIT_RIGHT : HUD_LAYOUT_CREDIT_LEFT;
+    push32(c, caller);
+    const int previous_weapon_player = weapon_disabled_player;
+    const uint32_t bank = rd32(c->eax + 8);
+    if (caller == 0x0816542bu && (bank == 4u || bank == 5u))
+        weapon_disabled_player = (int)player;
+    lifted_boss_sprite_draw(c);
+    weapon_disabled_player = previous_weapon_player;
+    queuing_layout = previous;
+    memcpy(translation, saved, sizeof saved);
+    return 1;
+}
+
 static void h_hud_sprite_draw(CPU *c)
 {
     uint32_t caller = rd32(c->esp - 4);
-    // CBossBase::Draw submits the label, fill and empty track as separate sprites.
+    if (draw_inventory_sprite(c, caller)) return;
     HudSpriteLayout previous = queuing_layout;
+    // These weak-point sprites already have an anchor in render pixels.
+    // Convert only the translation to the centered HUD canvas so the
+    // layout keeps the sprite's size without moving it away from the model.
+    if (caller == 0x080da483u || caller == 0x080f8319u) {
+        int width, height;
+        lindbergh_window_size(&width, &height);
+        void *translation = GP(c->edx + 0x30);
+        float projected[2];
+        memcpy(projected, translation, sizeof projected);
+        const float centered[2] = {
+            320.0f + (projected[0] - 0.5f * width) * 640.0f / (0.75f * width),
+            projected[1] * 480.0f / height
+        };
+        memcpy(translation, centered, sizeof centered);
+        queuing_layout = HUD_LAYOUT_CENTER;
+        push32(c, caller);
+        lifted_boss_sprite_draw(c);
+        queuing_layout = previous;
+        memcpy(translation, projected, sizeof projected);
+        return;
+    }
+    // CPlayerSprite::Draw also draws the bell multiplier as separate quads.
+    // Its owner stores this specific sprite at +0xd88.
+    if (caller == 0x081688d5u) {
+        const uint32_t sprite = c->eax - 0x40;
+        const uint32_t owner = rd32(sprite + 0x34);
+        if (owner && rd32(owner + 0xd88) == sprite)
+            queuing_layout = rd8(owner + PLAYER_INDEX) == 1 ? HUD_LAYOUT_CREDIT_RIGHT : HUD_LAYOUT_CREDIT_LEFT;
+    }
+    // CBossBase::Draw submits the label, fill and empty track as separate sprites.
     if (caller == 0x080da291u || caller == 0x080da2a3u || caller == 0x080da2b5u ||
         caller == 0x080da2e2u || caller == 0x080da2f4u)
         queuing_layout = HUD_LAYOUT_BOSS;
@@ -809,6 +907,13 @@ static void h_hud_sprite_draw(CPU *c)
     // The SEGA panel and CAdvertise's two serial ID rows share the boot canvas.
     else if (caller == 0x08050712u || caller == 0x0805092eu)
         queuing_layout = HUD_LAYOUT_SPLASH;
+    // The pushed-down warning is a single sprite with several quads.
+    else if (caller == 0x0816bf8cu)
+        queuing_layout = HUD_LAYOUT_GRAB;
+    // The door control-panel notice is animation bank 8 of the gameplay telop.
+    else if (caller == 0x08175c46u && rd32(c->eax + 0xec) == 0u &&
+             rd32(c->eax + 8) == 8u)
+        queuing_layout = HUD_LAYOUT_GRAB;
     else if (caller == 0x08175c46u && rd32(c->eax + 0xec) == 1u) {
         // CTelopBase also draws gameplay panels. Match the logo telop ID
         // while CAdvertise's startup serial timer is active.
@@ -844,44 +949,160 @@ static void install_reload_feedback(void)
     if (lifted_sprite_next) guest_override(next, h_reload_sprite_next);
 }
 
-/* Result panels form one original 640x480 canvas. Per-quad gameplay HUD
- * anchoring splits scores/rank labels from their player frames, especially
- * in co-op. Carry one centered layout through the deferred primitive queue
- * for chapter results and the final player ranking, including their fonts. */
-static HleHandler result_layout_draws[7];
-static void result_layout_draw(CPU *c, unsigned index)
+static HleHandler lifted_effect_vertices;
+typedef struct {
+    float source_x, source_y, target_x, target_y, scale_x, scale_y;
+} IntroCaptionLayout;
+
+static const IntroCaptionLayout *intro_caption_layout(void)
 {
-    HudSpriteLayout previous=queuing_layout;
-    queuing_layout=HUD_LAYOUT_CENTER;
-    push32(c,rd32(c->esp-4));result_layout_draws[index](c);
-    queuing_layout=previous;
-}
-#define RESULT_DRAW(n) static void result_layout_##n(CPU*c){result_layout_draw(c,n);}
-RESULT_DRAW(0) RESULT_DRAW(1) RESULT_DRAW(2) RESULT_DRAW(3)
-RESULT_DRAW(4) RESULT_DRAW(5) RESULT_DRAW(6)
-#undef RESULT_DRAW
-static void install_result_layout(void)
-{
-    static const char *names[]={
-        "_ZN13CResultScreen4DrawEv",
-        "_ZN13CResultPlayer4DrawEv",
-        "_ZN12CResultMeter4DrawEv",
-        "_ZN16CPlRankingScreen4DrawEv",
-        "_ZN16CPlRankingPlayer4DrawEv",
-        "_ZN15CPlRankingMeter4DrawEv",
-        "_ZN17CPlRankingTtlRank4DrawEv",
-    };
-    static const HleHandler draws[]={result_layout_0,result_layout_1,result_layout_2,
-        result_layout_3,result_layout_4,result_layout_5,result_layout_6};
-    for(unsigned i=0;i<sizeof names/sizeof *names;i++){
-        result_layout_draws[i]=dispatch_lifted(guest_symbol(names[i]));
-        if(result_layout_draws[i])guest_override(names[i],draws[i]);
+    static const IntroCaptionLayout later = {0.524f, 0.612f, 0.36f, 0.627f, 3.1f, 2.05f};
+    static const IntroCaptionLayout earlier = {0.704f, 0.315f, 0.57f, 0.325f, 2.39f, 1.65f};
+    const uint32_t event = rd32(0x0a71173cu);
+    if (!event) return NULL;
+
+    // Each address is the script's wait command for that opening card.
+    switch (rd32(event + 0x40)) {
+    case 0x0845d024u: return &later;
+    case 0x0846ae80u: return &earlier;
+    default: return NULL;
     }
+}
+
+static void h_effect_vertices(CPU *c)
+{
+    uint32_t caller = rd32(c->esp - 4);
+    switch (caller) {
+    case 0x0816c84eu: { // CCsPlayer sprite quad
+        if (weapon_disabled_player < 0) break;
+        float (*vertices)[6] = GP(A32(0));
+        // The tall X shares an animation bank with the small player label.
+        if (fabsf(vertices[2][1] - vertices[0][1]) < 100.0f) break;
+
+        float saved[4][6];
+        memcpy(saved, vertices, sizeof saved);
+        const float x_scale = 1.33f, y_scale = 1.25f;
+        const float pixels_to_hud = 640.0f / 0.75f;
+        const float original_center = 0.0545f * pixels_to_hud;
+        const float target_center = 0.063f * pixels_to_hud;
+        const int right = weapon_disabled_player == 1;
+        const float from = right ? 640.0f - original_center : original_center;
+        const float to = right ? 640.0f - target_center : target_center;
+        for (unsigned i = 0; i < 4; ++i) {
+            vertices[i][0] = to + (vertices[i][0] - from) * x_scale;
+            vertices[i][1] = 0.333f * 480.0f + (vertices[i][1] - 0.337f * 480.0f) * y_scale;
+        }
+        push32(c, caller);
+        lifted_effect_vertices(c);
+        memcpy(vertices, saved, sizeof saved);
+        return;
+    }
+    case 0x08153c8au: // Glare's first pass samples the original scene texture.
+    case 0x08161b05u: { // Draw_Blur's horizontal pass
+        if (caller == 0x08153c8au && c->edi != 0) break;
+        const IntroCaptionLayout *layout = intro_caption_layout();
+        if (!layout) break;
+
+        // This opening card is the only artwork in the scene texture.
+        // Reframe it before the native blur and separate arcade HUD passes.
+        float (*vertices)[6] = GP(A32(0));
+        float original[4][2];
+        const float left = vertices[0][3], top = vertices[0][4];
+        const float du = vertices[1][3] - left, dv = vertices[2][4] - top;
+        for (unsigned i = 0; i < 4; ++i) {
+            original[i][0] = vertices[i][3];
+            original[i][1] = vertices[i][4];
+            vertices[i][3] = left + (layout->source_x - layout->target_x / layout->scale_x) * du
+                             + (original[i][0] - left) / layout->scale_x;
+            vertices[i][4] = top + (layout->source_y - layout->target_y / layout->scale_y) * dv
+                             + (original[i][1] - top) / layout->scale_y;
+        }
+        push32(c, caller);
+        lifted_effect_vertices(c);
+        for (unsigned i = 0; i < 4; ++i) {
+            vertices[i][3] = original[i][0];
+            vertices[i][4] = original[i][1];
+        }
+        return;
+    }
+    case 0x08161a79u: // Draw_DoF's final composite
+    case 0x08161b80u: // Draw_Blur's final composite
+    case 0x08161c53u: { // Draw_1Pass
+        // The final pass targets a screen at render resolution, but its
+        // original quad is fixed at 1280x768. Replace just the right and bottom
+        // edges of the four 24-byte KfTextureVertex records. The same arrays
+        // are also used by offscreen passes, so restore them after submission.
+        int width, height;
+        lindbergh_window_size(&width, &height);
+        float (*vertices)[6] = GP(A32(0));
+        const float right_top = vertices[1][0];
+        const float bottom_left = vertices[2][1];
+        const float right_bottom = vertices[3][0];
+        const float bottom_right = vertices[3][1];
+        vertices[1][0] = vertices[3][0] = (float)width;
+        vertices[2][1] = vertices[3][1] = (float)height;
+        push32(c, caller);
+        lifted_effect_vertices(c);
+        vertices[1][0] = right_top;
+        vertices[2][1] = bottom_left;
+        vertices[3][0] = right_bottom;
+        vertices[3][1] = bottom_right;
+        return;
+    }
+    }
+    push32(c, caller);
+    lifted_effect_vertices(c);
+}
+
+static HleHandler lifted_result_player_draw, lifted_result_meter_draw;
+static HleHandler lifted_ranking_player_draw, lifted_ranking_meter_draw, lifted_ranking_rank_draw;
+
+static void draw_with_hud_layout(CPU *c, HleHandler draw, HudSpriteLayout layout)
+{
+    HudSpriteLayout previous = queuing_layout;
+    queuing_layout = layout;
+    push32(c, rd32(c->esp - 4));
+    draw(c);
+    queuing_layout = previous;
+}
+
+static void draw_result_panel(CPU *c, unsigned player, HleHandler draw)
+{
+    // Panels, meters and rank artwork use one offset for each player.
+    draw_with_hud_layout(c, draw, player == 1 ? HUD_LAYOUT_RESULT_RIGHT : HUD_LAYOUT_RESULT_LEFT);
+}
+
+static void h_result_player_draw(CPU *c)
+{
+    draw_result_panel(c, rd32(A32(0) + 0x3c), lifted_result_player_draw);
+}
+
+static void h_result_meter_draw(CPU *c)
+{
+    draw_result_panel(c, rd32(A32(0) + 0x40), lifted_result_meter_draw);
+}
+
+static void h_ranking_player_draw(CPU *c)
+{
+    draw_result_panel(c, rd32(A32(0) + 0x3c), lifted_ranking_player_draw);
+}
+
+static void h_ranking_meter_draw(CPU *c)
+{
+    draw_result_panel(c, rd32(A32(0) + 0x44), lifted_ranking_meter_draw);
+}
+
+static void h_ranking_rank_draw(CPU *c)
+{
+    draw_result_panel(c, rd32(A32(0) + 0x44), lifted_ranking_rank_draw);
 }
 
 static void install_wide_hud_layout(void)
 {
-    install_result_layout();
+    const char *effect_vertices = "_Z27HyPrimitiveSetTextureVertexPK15KfTextureVertexii";
+    lifted_effect_vertices = dispatch_lifted(guest_symbol(effect_vertices));
+    if (lifted_effect_vertices) guest_override(effect_vertices, h_effect_vertices);
+
     lifted_font_ctor=dispatch_lifted(guest_symbol("_ZN5CFontC9EP6MlTask"));
     if(lifted_font_ctor)guest_override("_ZN5CFontC9EP6MlTask",h_font_ctor);
     lifted_font_clear=dispatch_lifted(guest_symbol("_ZN5CFont5ClearEv"));
@@ -911,6 +1132,26 @@ static void install_wide_hud_layout(void)
         guest_override(begin_frame, h_hud_begin_frame);
         guest_override(primitive_begin, h_primitive_begin);
         guest_override(primitive_draw, h_primitive_draw);
+
+        static const struct {
+            const char *symbol;
+            HleHandler *original;
+            HleHandler hook;
+        } end_screen_draws[] = {
+            {"_ZN13CResultPlayer4DrawEv", &lifted_result_player_draw, h_result_player_draw},
+            {"_ZN12CResultMeter4DrawEv", &lifted_result_meter_draw, h_result_meter_draw},
+            {"_ZN16CPlRankingPlayer4DrawEv", &lifted_ranking_player_draw, h_ranking_player_draw},
+            {"_ZN15CPlRankingMeter4DrawEv", &lifted_ranking_meter_draw, h_ranking_meter_draw},
+            {"_ZN17CPlRankingTtlRank4DrawEv", &lifted_ranking_rank_draw, h_ranking_rank_draw},
+        };
+        for (unsigned i = 0; i < sizeof end_screen_draws / sizeof *end_screen_draws; ++i) {
+            const char *symbol = end_screen_draws[i].symbol;
+            HleHandler draw = dispatch_lifted(guest_symbol(symbol));
+            if (draw) {
+                *end_screen_draws[i].original = draw;
+                guest_override(symbol, end_screen_draws[i].hook);
+            }
+        }
     }
 }
 #endif

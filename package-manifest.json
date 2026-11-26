@@ -39,7 +39,7 @@
     },
     {
       "path": "source/games/hotd4/src/host.c",
-      "sha256": "dfe90511ce827159cf93bfc24f347b2977144122e8f20e839788efbf3f207b88"
+      "sha256": "69f57854c6aa8d4b9087d2619ac560ffdba35ed44d9408051a77291eb01fd493"
     },
     {
       "path": "source/games/hotd4/src/hotd4_hd_textures.c",
@@ -291,7 +291,7 @@
     },
     {
       "path": "source/lindberghrecomp/src/runtime/hud_widen.c",
-      "sha256": "61f1feb0c8def5b603719dc8eda2c2829832a155a51f138807edbb4205a15954"
+      "sha256": "1a6b26dd63c51131aa9403043d6fbd55321c50b7571e8546a268ef622d419457"
     },
     {
       "path": "source/lindberghrecomp/src/runtime/input_options.h",
@@ -303,7 +303,7 @@
     },
     {
       "path": "source/lindberghrecomp/src/runtime/lindbergh_rt.h",
-      "sha256": "3dcf8ff42ef6fb85714d7afde77f491e3d09dec847bd4f4688a73e99680c3688"
+      "sha256": "448ca1aebcb3130931947a80b684e5a8c72ba3700495910dc606583864a49c8b"
     },
     {
       "path": "source/lindberghrecomp/src/runtime/mouse_shake.h",

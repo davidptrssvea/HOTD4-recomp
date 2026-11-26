@@ -314,6 +314,13 @@ typedef enum {
     HUD_LAYOUT_GRAB,
     HUD_LAYOUT_SPLASH,
     HUD_LAYOUT_CENTER,
+    HUD_LAYOUT_CREDIT_LEFT,
+    HUD_LAYOUT_CREDIT_RIGHT,
+    HUD_LAYOUT_RESULT_LEFT,
+    HUD_LAYOUT_RESULT_RIGHT,
+    HUD_LAYOUT_SCORE_LEFT,
+    HUD_LAYOUT_SCORE_RIGHT,
+    HUD_LAYOUT_WIDE,
 } HudSpriteLayout;
 HudSpriteLayout hud_sprite_layout(HudSpriteLayout layout);
 /* Optional HOTD4 desktop HUD. The render environment tracks its 2D and

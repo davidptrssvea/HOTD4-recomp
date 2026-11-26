@@ -39,7 +39,7 @@
 enum { HUD_PLAYER_SPRITES = 15, HUD_ARCADE_TEXT = 16 };
 static int g_render_env = -1;
 static HudSpriteLayout g_sprite_layout;
-static unsigned g_route_frame = ~0u;
+static unsigned g_wide_canvas_frame = ~0u;
 static float g_hud_scale;
 static int g_hud_scale_set;
 
@@ -81,22 +81,22 @@ HudSpriteLayout hud_sprite_layout(HudSpriteLayout layout)
 extern unsigned g_frame;
 static float g_f;
 
-void hud_route_mark(void)
+void hud_wide_canvas_mark(void)
 {
-    g_route_frame = g_frame;
+    g_wide_canvas_frame = g_frame;
 }
 
-static int route_layout_active(void)
+static int wide_canvas_active(void)
 {
     // The game's sprite commands are queued and submitted later by RenderEnv.
-    return g_route_frame == g_frame && g_render_env == HUD_PLAYER_SPRITES;
+    return g_wide_canvas_frame == g_frame && g_render_env == HUD_PLAYER_SPRITES;
 }
 static int (*g_anchored)(void);
 int hud_custom_draw_viewport(int viewport[4])
 {
     /* The ammunition models are drawn as indexed geometry in the separate
      * player UI pass. Scale them in screen space, around the player's edge. */
-    if (route_layout_active() || g_render_env != HUD_PLAYER_SPRITES || g_hud_scale <= 0 || g_hud_scale == 1)
+    if (wide_canvas_active() || g_render_env != HUD_PLAYER_SPRITES || g_hud_scale <= 0 || g_hud_scale == 1)
         return 0;
 
     GLint framebuffer, vp[4];
@@ -170,9 +170,10 @@ static void push(int op, GLenum target, float a, float b, float cc, float d)
 
 static void w_glBegin(CPU *c)
 {
-    int centered_canvas = g_sprite_layout == HUD_LAYOUT_GRAB || g_sprite_layout == HUD_LAYOUT_SPLASH ||
-                          g_sprite_layout == HUD_LAYOUT_CENTER;
-    if (g_f > 0 && (g_mv_identity || route_layout_active() || centered_canvas) && A32(0) == GL_QUADS) {
+    int fixed_canvas = g_sprite_layout == HUD_LAYOUT_GRAB ||
+                       g_sprite_layout == HUD_LAYOUT_SPLASH ||
+                       g_sprite_layout == HUD_LAYOUT_CENTER || g_sprite_layout == HUD_LAYOUT_WIDE;
+    if (g_f > 0 && (g_mv_identity || wide_canvas_active() || fixed_canvas) && A32(0) == GL_QUADS) {
         g_recording = 1; g_nops = 0; g_overflow = 0; g_prim = A32(0);
         return;
     }
@@ -402,11 +403,11 @@ static void w_glEnd(CPU *c)
 
     GLfloat p[16];
     glGetFloatv(GL_PROJECTION_MATRIX, p);
-    int route = route_layout_active();
-    if (route || g_sprite_layout == HUD_LAYOUT_GRAB || g_sprite_layout == HUD_LAYOUT_SPLASH || g_sprite_layout == HUD_LAYOUT_CENTER) {
-        // Route selection spans the gun area. Grab and boot sprites share a
-        // centered 4:3 canvas, including the widest pieces of each panel.
-        float fit_x = route ? 1.0f : g_f;
+    int wide_canvas = wide_canvas_active() || g_sprite_layout == HUD_LAYOUT_WIDE;
+    if (wide_canvas || g_sprite_layout == HUD_LAYOUT_GRAB || g_sprite_layout == HUD_LAYOUT_SPLASH || g_sprite_layout == HUD_LAYOUT_CENTER) {
+        // Full-screen overlays and route selection share the whole viewport.
+        // Other fixed canvases preserve the shape of their original artwork.
+        float fit_x = wide_canvas ? 1.0f : g_f;
         for (int col = 0; col < 4; ++col) {
             p[col * 4] = fit_x * (g_lx * p[col * 4] + g_lox * p[col * 4 + 3]);
             p[col * 4 + 1] = g_ly * p[col * 4 + 1] + g_loy * p[col * 4 + 3];
@@ -470,8 +471,25 @@ static void w_glEnd(CPU *c)
         return;
     }
 
+    int result_panel = g_sprite_layout == HUD_LAYOUT_RESULT_LEFT || g_sprite_layout == HUD_LAYOUT_RESULT_RIGHT;
+    int score_row = g_sprite_layout == HUD_LAYOUT_SCORE_LEFT || g_sprite_layout == HUD_LAYOUT_SCORE_RIGHT;
     float s = 0;
-    if (g_sprite_layout != HUD_LAYOUT_BOSS) {
+    if (result_panel || score_row || g_sprite_layout == HUD_LAYOUT_CREDIT_LEFT || g_sprite_layout == HUD_LAYOUT_CREDIT_RIGHT) {
+        // Give each group a common offset. Clamping the score glyphs
+        // individually can make adjacent digits land on top of one another.
+        int left = g_sprite_layout == HUD_LAYOUT_CREDIT_LEFT ||
+                   g_sprite_layout == HUD_LAYOUT_RESULT_LEFT ||
+                   g_sprite_layout == HUD_LAYOUT_SCORE_LEFT;
+        if (g_anchored && g_anchored()) {
+            float edge = 1.0f - g_f;
+            if (score_row) edge -= 0.04f; // Inset the whole row by 2% of the frame.
+            // Leave room for both players' full life displays.
+            if (g_render_env == HUD_ARCADE_TEXT &&
+                (g_sprite_layout == HUD_LAYOUT_CREDIT_LEFT || g_sprite_layout == HUD_LAYOUT_CREDIT_RIGHT))
+                edge -= 0.08f;
+            s = left ? -edge : edge;
+        }
+    } else if (g_sprite_layout != HUD_LAYOUT_BOSS) {
         s = place(box);
         /* Keep widened quads within the visible viewport. */
         if (box[0] * g_f + s < -0.96f) s = -0.96f - box[0] * g_f;
@@ -485,7 +503,9 @@ static void w_glEnd(CPU *c)
     if (g_hud_scale > 0 && (g_render_env == HUD_PLAYER_SPRITES || g_render_env == HUD_ARCADE_TEXT)) {
         scale = g_hud_scale;
         anchor_x = s < -0.05f ? -0.96f : s > 0.05f ? 0.96f : 0.0f;
-        anchor_y = g_sprite_layout == HUD_LAYOUT_BOSS ? 0.94f : -0.94f;
+        // Tall result cards scale vertically around the middle of the frame.
+        if (!result_panel)
+            anchor_y = score_row || g_sprite_layout == HUD_LAYOUT_BOSS ? 0.94f : -0.94f;
     }
     float tx = scale * (g_f * lox + s) + (1.0f - scale) * anchor_x;
     float ty = scale * loy + (1.0f - scale) * anchor_y;
